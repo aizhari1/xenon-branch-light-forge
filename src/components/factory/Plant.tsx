@@ -104,7 +104,7 @@ function Settling({ item, selected, onSelect }: { item: EqItem; selected: boolea
   const r = 3.5;
   const tip = 1.5;
   const coneH = 2.02;
-  const shellH = 3.08;
+  const shellH = 4.28;
   const roofH = 0.8;
   const junction = tip + coneH;
   const shellTop = junction + shellH;
