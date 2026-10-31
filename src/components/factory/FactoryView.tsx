@@ -11,22 +11,28 @@ type Shot = { pos: [number, number, number]; target: [number, number, number] };
 function shotFor(tag: string): Shot | null {
   const eq = EQUIPMENT.find((e) => e.tag === tag);
   if (!eq) return null;
-  if (eq.kind === "separator") {
-    return { pos: [eq.pos[0], 7.4, eq.pos[2] + 16], target: [eq.pos[0], 7.4, eq.pos[2]] };
-  }
-  if (eq.kind === "effluent") {
-    return { pos: [eq.pos[0] + 2, 7, eq.pos[2] + 12], target: [eq.pos[0], -0.8, eq.pos[2]] };
+  if (eq.kind === "column") {
+    return { pos: [eq.pos[0] + 10, 10, eq.pos[2] + 16], target: [eq.pos[0], 8, eq.pos[2]] };
   }
   if (eq.kind === "settling") {
-    return { pos: [eq.pos[0], 4.8, eq.pos[2] + 13], target: [eq.pos[0], 4.8, eq.pos[2]] };
+    return { pos: [eq.pos[0], 5, eq.pos[2] + 12], target: [eq.pos[0], 3, eq.pos[2]] };
+  }
+  if (eq.kind === "tank" || eq.kind === "silo") {
+    return { pos: [eq.pos[0], 8, eq.pos[2] + 14], target: [eq.pos[0], 5, eq.pos[2]] };
+  }
+  if (eq.kind === "kiln") {
+    return { pos: [eq.pos[0], 6, eq.pos[2] - 14], target: [eq.pos[0], 2, eq.pos[2]] };
+  }
+  if (eq.kind === "pit") {
+    return { pos: [eq.pos[0] - 8, 6, eq.pos[2] + 10], target: [eq.pos[0], 0, eq.pos[2]] };
   }
   const y = (eq.height ?? 5) * 0.4;
-  return { pos: [eq.pos[0], y, eq.pos[2] + 12], target: [eq.pos[0], y, eq.pos[2]] };
+  return { pos: [eq.pos[0], y + 3, eq.pos[2] + 12], target: [eq.pos[0], y, eq.pos[2]] };
 }
 
 export function FactoryView() {
   const [selected, setSelected] = useState<string | null>(null);
-  const [view, setView] = useState<ViewId>("site");
+  const [view, setView] = useState<ViewId>("overview");
   const [open, setOpen] = useState(true);
   const [about, setAbout] = useState(false);
   const [mode, setMode] = useState<"orbit" | "walk">("orbit");
@@ -34,7 +40,6 @@ export function FactoryView() {
   const [tags, setTags] = useState(true);
   const [shot, setShot] = useState<Shot | null>(null);
   const item = EQUIPMENT.find((e) => e.tag === selected) ?? null;
-  const ps03 = view.startsWith("ps03");
 
   useEffect(() => {
     if (!tour) return;
@@ -55,7 +60,7 @@ export function FactoryView() {
           shadows
           dpr={[1, 1.6]}
           gl={{ localClippingEnabled: true }}
-          camera={{ position: [28, 36, 78], fov: 38, near: 0.1, far: 400 }}
+          camera={{ position: [12, 28, 42], fov: 38, near: 0.1, far: 400 }}
           onPointerMissed={() => {
             setSelected(null);
             setShot(null);
@@ -81,7 +86,7 @@ export function FactoryView() {
             maxPolarAngle={Math.PI / 2.05}
             minDistance={mode === "walk" ? 0.4 : 6}
             maxDistance={180}
-            target={[40, 2, 2]}
+            target={[15, 2, 2]}
             enableZoom={mode === "orbit"}
             enablePan={mode === "orbit"}
           />
@@ -104,7 +109,7 @@ export function FactoryView() {
           <span className="live-dot" />
           WM OIL PROJECT
           <span>
-            <span className="slash">/</span>PRELIMINARY VISUALIZATION · REV P0
+            <span className="slash">/</span>REFERENCE MATCH · REV P1
           </span>
         </div>
         <button className="icon" type="button" aria-label="About this model" title="About this model" onClick={() => setAbout(true)}>
@@ -118,14 +123,10 @@ export function FactoryView() {
       <div className="heading">
         <div className="eyebrow">
           SITE EXPLORER
-          <span>{ps03 ? "03 — SEPARATOR / GA REV P1" : "01 — RECEPTION / REV.2 INTERNALS"}</span>
+          <span>T-21 · T-22 · T-24 · T-6.001 · T-K.002</span>
         </div>
-        <h1>{ps03 ? "PS-03. Main Separator V-301." : "SEVERO. One connected site."}</h1>
-        <p>
-          {ps03
-            ? "Cutaway follows LAY-001: trays, flash box, demister, and the oil-film path."
-            : "PS-01 reception · PS-02 settling · PS-03 separation."}
-        </p>
+        <h1>SEVERO plant — reference layout</h1>
+        <p>Settling train · process column · storage · kiln · reception pits</p>
       </div>
 
       <aside className={open ? "explorer" : "explorer collapsed"}>
@@ -184,8 +185,8 @@ export function FactoryView() {
               ))}
             </div>
             <div className="panel-foot">
-              Drawing-based masses
-              <b>IFR</b>
+              Reference-matched layout
+              <b>REV P1</b>
             </div>
           </>
         ) : null}
@@ -205,13 +206,9 @@ export function FactoryView() {
             {item.diameter ? <div>Diameter {item.diameter} m</div> : null}
             {item.height ? <div>Height {item.height} m</div> : null}
             {item.volume ? <div>Volume {item.volume} m³</div> : null}
-            {item.emptyWt ? <div>Empty steel {item.emptyWt} t</div> : null}
             <div>{item.type}</div>
           </div>
           <small>
-            {selected
-              ? "Shell open. Click empty ground to close."
-              : null}{" "}
             {item.dimStatus} · {item.source}
             {item.notes ? ` · ${item.notes}` : ""}
           </small>
@@ -229,7 +226,7 @@ export function FactoryView() {
         </div>
         <button type="button" className={tour ? "tour-button on" : "tour-button"} onClick={() => setTour((v) => !v)}>
           {tour ? "Stop tour" : "Take a guided tour"}
-          <span className="tour-duration">7 VIEWS</span>
+          <span className="tour-duration">{ORDER.length} VIEWS</span>
         </button>
         <button
           className="reset"
@@ -237,7 +234,7 @@ export function FactoryView() {
           aria-label="Reset view"
           title="Reset view"
           onClick={() => {
-            setView("site");
+            setView("overview");
             setSelected(null);
             setTour(false);
             setMode("orbit");
@@ -257,7 +254,7 @@ export function FactoryView() {
 
       <div className="instruction">
         <div>{mode === "walk" ? "Use arrows to move · Drag to look" : "Drag to orbit · Scroll to zoom · Right-drag to pan"}</div>
-        <span>PRELIMINARY VISUALIZATION · REV P0</span>
+        <span>REFERENCE MATCH · REV P1</span>
       </div>
 
       {about ? (
@@ -265,13 +262,12 @@ export function FactoryView() {
           <div className="about" onClick={(e) => e.stopPropagation()} role="dialog" aria-labelledby="about-title">
             <h2 id="about-title">About this model</h2>
             <p>
-              Interactive three-dimensional SEVERO site. Vessel diameters, heights and empty weights follow the
-              vessel and equipment schedule. Plot positions are a process sequence, not a surveyed GA coordinate.
+              Interactive 3D reconstruction matching the reference plant layout: T-21, T-22, T-24 settling tanks,
+              process column, T-6.001 / T-K.002 storage, Cement Silo, rotary kiln, heat exchanger, and reception pits.
             </p>
-            <p>PS-01 reception · PS-02 settling · PS-03 separation · PS-06 product storage.</p>
+            <p>Orbit and walk modes available. Click any equipment for details.</p>
             <div className="about-note">
-              Daylight materials are a visualization. They are not a photogrammetry scan of the reference site, and
-              V-301 internals are not drawn yet.
+              Geometry is approximate and built to match the visual reference. Not a surveyed GA or photogrammetry scan.
             </div>
             <button className="tour-button" type="button" style={{ marginTop: 18 }} onClick={() => setAbout(false)}>
               Close
